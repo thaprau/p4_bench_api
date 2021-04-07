@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: example-pkg-thaprau
+Version: 0.0.1
+Summary: Package for creating network configuration files
+Home-page: https://github.com/thaprau/p4_bench_api
+Author: Johan Paulsson
+Author-email: johan.paulsson@combitech.com
+License: UNKNOWN
+Project-URL: Bug Tracker, https://github.com/thaprau/p4_bench_api/issues
+Description: Hello
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
