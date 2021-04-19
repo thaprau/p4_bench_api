@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="p4-bench-api-thaprau", # Replace with your own username
+    name="p4-bench-api-thaprau",
     version="0.0.1",
     author="Johan Paulsson",
     author_email="johan.paulsson@combitech.com",
