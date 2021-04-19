@@ -32,5 +32,7 @@ link_node_to_switch(setup, "Node4", "Switch2")
 link_switch_to_switch(setup, "Switch1", "Switch2", 100, 100)
 
 setup.check_for_errors()
+
+save_to_json("/path/to/file.json")
 ```
 
