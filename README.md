@@ -7,7 +7,8 @@ cd p4_bench_api
 pip3 install .
 ```
 
+## Example
 
-## Usage
+```
+```
 
-To use the API, create a python script and import the module with ```import p4_bench_api```
