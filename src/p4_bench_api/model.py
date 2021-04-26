@@ -27,11 +27,12 @@ class Node(object):
 
 
 class Switch(object):
-    def __init__(self, name):
+    def __init__(self, name, p4_file_name):
         self.name = name
         self.iface = ""
         self.table_entries = []
         self.used_ports = []
+        self.p4_file_name = p4_file_name
 
     def __eq__(self, other):
         if isinstance(other, Switch):
@@ -109,6 +110,7 @@ class NetworkSetup(object):
             setup_dict["switches"][switch.name] = {
                 "table_entries": switch.table_entries,
                 "used_ports": switch.used_ports,
+                "p4_file_name": switch.p4_file_name,
             }
 
         setup_dict["links"] = []

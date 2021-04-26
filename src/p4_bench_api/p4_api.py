@@ -31,14 +31,14 @@ def add_new_node(setup, name, ipv4_addr="", mac_addr="", node_id=""):
         print("Node with same id or name already exits")
 
 
-def add_new_switch(setup, name):
+def add_new_switch(setup, name, p4_file_name):
     """Adds a new switch to the setup
 
     Args:
         setup ([NetworkSetup]): The setup to add the switch to
         name (str): Name of the switch. Should be unique
     """
-    switch = Switch(name)
+    switch = Switch(name, p4_file_name)
 
     if not switch in setup.switches:
         setup.add_switch(switch)
@@ -245,12 +245,12 @@ def generate_node_id():
 def main():
     setup = NetworkSetup()
 
-    add_new_switch(setup, "Switch1")
-    add_new_switch(setup, "Switch2")
-    add_new_switch(setup, "Switch3")
-    add_new_switch(setup, "Switch4")
-    add_new_switch(setup, "Switch5")
-    add_new_switch(setup, "Switch6")
+    add_new_switch(setup, "Switch1", "simple_switch.json")
+    add_new_switch(setup, "Switch2", "simple_switch.json")
+    add_new_switch(setup, "Switch3", "simple_switch.json")
+    add_new_switch(setup, "Switch4", "simple_switch.json")
+    add_new_switch(setup, "Switch5", "simple_switch.json")
+    add_new_switch(setup, "Switch6", "simple_switch.json")
 
     # Add table entries for the switches
     add_switch_table(setup, "Switch1", "ip_table1.json")
