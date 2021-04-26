@@ -9,10 +9,14 @@ pip3 install .
 
 ## Usage
 
-To use the api, start py importing the package. Then create and instace of the NetworSetup.
+To use the api, start py importing the package. 
+
+Then create and instace of the NetworSetup.
 Then the wanted devices tp the setup with add_new_node and add_new_switch. Link the setup
 together by creating links. Depending on what you are connecting, choose between
-link_node_to_switch, link_switch_to_switch or link_node_to_node. Finally, run setup.check_for_errors()
+link_node_to_switch, link_switch_to_switch or link_node_to_node. 
+
+Finally, run setup.check_for_errors()
 to traverse the setup and look for error. Then save the setup to a json file.
 
 ## Example
