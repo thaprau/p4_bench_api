@@ -44,6 +44,11 @@ def add_new_switch(setup, name, p4_file_name):
         setup.add_switch(switch)
 
 
+def add_switch_to_setup(setup, switch):
+    if not switch in setup.switches:
+        setup.add_switch(switch)
+
+
 def add_switch_table(setup, switch_name, table_name):
     """Add a table definition to a switch
 
@@ -245,59 +250,159 @@ def generate_node_id():
 def main():
     setup = NetworkSetup()
 
-    add_new_switch(setup, "Switch1", "simple_switch.json")
-    add_new_switch(setup, "Switch2", "simple_switch.json")
-    add_new_switch(setup, "Switch3", "simple_switch.json")
-    add_new_switch(setup, "Switch4", "simple_switch.json")
-    add_new_switch(setup, "Switch5", "simple_switch.json")
-    add_new_switch(setup, "Switch6", "simple_switch.json")
+    switch1 = Switch(
+        "S1",
+        p4_prog_name="simple_switch",
+        p4_info_path="/home/p4/installations/bf-sde-9.5.0/build/p4-build/tofino/simple_switch2/tofino/p4info2.pb.txt",
+        server_port=50053,
+    )
 
-    # Add table entries for the switches
-    add_switch_table(setup, "Switch1", "ip_table1.json")
-    add_switch_table(setup, "Switch2", "ip_table2.json")
-    add_switch_table(setup, "Switch3", "ip_table3.json")
-    add_switch_table(setup, "Switch4", "ip_table4.json")
-    add_switch_table(setup, "Switch5", "ip_table5.json")
-    add_switch_table(setup, "Switch6", "ip_table6.json")
+    switch1.add_table_entry(
+        "Ingress.ipv4_exact",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["1", 2]},
+        {"egress_port": 5},
+    )
 
-    add_new_node(setup, "Node1", "192.168.1.1")
-    add_new_node(setup, "Node2", "192.168.1.2")
-    add_new_node(setup, "Node3", "192.168.1.3")
-    add_new_node(setup, "Node4", "192.168.1.4")
+    # switch1.add_table_entry(
+    #     "Ingress.ipv4_lpm",
+    #     "Ingress.ipv4_forward",
+    #     {"hdr.ipv4.dst_addr": ["10.0.1.1", 32]},
+    #     {"egress_port": 1},
+    # )
+    switch1.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.2.2", 32]},
+        {"egress_port": 2},
+    )
+    switch1.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.3.3", 32]},
+        {"egress_port": 3},
+    )
+    switch1.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.4.4", 32]},
+        {"egress_port": 3},
+    )
 
-    add_new_node(setup, "Node5", "192.168.1.5")
-    add_new_node(setup, "Node6", "192.168.1.6")
-    add_new_node(setup, "Node7", "192.168.1.7")
-    add_new_node(setup, "Node8", "192.168.1.8")
+    switch2 = Switch(
+        "S2",
+        p4_prog_name="simple_switch",
+        p4_info_path="/home/p4/installations/bf-sde-9.5.0/build/p4-build/tofino/simple_switch/tofino/p4info2.pb.txt",
+        server_port=50054,
+    )
+    switch2.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.1.1", 32]},
+        {"egress_port": 4},
+    )
+    switch2.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.2.2", 32]},
+        {"egress_port": 4},
+    )
+    switch2.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.3.3", 32]},
+        {"egress_port": 1},
+    )
+    switch2.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.4.4", 32]},
+        {"egress_port": 2},
+    )
 
-    add_new_node(setup, "Node9", "192.168.1.9")
-    add_new_node(setup, "Node10", "192.168.1.10")
-    add_new_node(setup, "Node11", "192.168.1.11")
-    add_new_node(setup, "Node12", "192.168.1.12")
+    switch3 = Switch(
+        "S3",
+        "simple_switch",
+        "/home/p4/installations/bf-sde-9.5.0/build/p4-build/tofino/simple_switch/tofino/p4info2.pb.txt",
+        50055,
+    )
+    switch3.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.1.1", 32]},
+        {"egress_port": 1},
+    )
+    switch3.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.2.2", 32]},
+        {"egress_port": 1},
+    )
+    switch3.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.3.3", 32]},
+        {"egress_port": 2},
+    )
+    switch3.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "Ingress.ipv4_forward",
+        {"hdr.ipv4.dst_addr": ["10.0.4.4", 32]},
+        {"egress_port": 2},
+    )
 
-    add_new_node(setup, "Node13", "192.168.1.13")
-    add_new_node(setup, "Node14", "192.168.1.14")
-    add_new_node(setup, "Node15", "192.168.1.15")
-    add_new_node(setup, "Node16", "192.168.1.16")
+    switch3.add_table_entry(
+        "Ingress.ipv4_lpm",
+        "",
+        {"  .name": ["test", 1]},
+        "",
+    )
 
-    add_new_node(setup, "Node13", "192.168.1.13")
-    add_new_node(setup, "Node14", "192.168.1.14")
-    add_new_node(setup, "Node15", "192.168.1.15")
-    add_new_node(setup, "Node16", "192.168.1.16")
+    add_switch_to_setup(setup, switch1)
+    add_switch_to_setup(setup, switch2)
+    add_switch_to_setup(setup, switch3)
 
-    add_new_node(setup, "Node17")
+    add_new_node(setup, "Node1", "10.0.1.1")
+    add_new_node(setup, "Node2", "10.0.2.2")
+    add_new_node(setup, "Node3", "10.0.3.3")
+    add_new_node(setup, "Node4", "10.0.4.4")
 
-    link_node_to_switch(setup, "Node1", "Switch1")
-    link_node_to_switch(setup, "Node2", "Switch1")
-    link_node_to_switch(setup, "Node3", "Switch2")
-    link_node_to_switch(setup, "Node4", "Switch2")
+    # add_new_node(setup, "Node5", "192.168.1.5")
+    # add_new_node(setup, "Node6", "192.168.1.6")
+    # add_new_node(setup, "Node7", "192.168.1.7")
+    # add_new_node(setup, "Node8", "192.168.1.8")
+
+    # add_new_node(setup, "Node9", "192.168.1.9")
+    # add_new_node(setup, "Node10", "192.168.1.10")
+    # add_new_node(setup, "Node11", "192.168.1.11")
+    # add_new_node(setup, "Node12", "192.168.1.12")
+
+    # add_new_node(setup, "Node13", "192.168.1.13")
+    # add_new_node(setup, "Node14", "192.168.1.14")
+    # add_new_node(setup, "Node15", "192.168.1.15")
+    # add_new_node(setup, "Node16", "192.168.1.16")
+
+    # add_new_node(setup, "Node13", "192.168.1.13")
+    # add_new_node(setup, "Node14", "192.168.1.14")
+    # add_new_node(setup, "Node15", "192.168.1.15")
+    # add_new_node(setup, "Node16", "192.168.1.16")
+
+    # add_new_node(setup, "Node17")
+
+    link_node_to_switch(setup, "Node1", "S1", 0, 1)
+    link_node_to_switch(setup, "Node2", "S1", 0, 2)
+    link_node_to_switch(setup, "Node3", "S2", 0, 1)
+    link_node_to_switch(setup, "Node4", "S2", 0, 2)
 
     # Long chain of switches test
-    link_switch_to_switch(setup, "Switch2", "Switch3", 51, 50)
-    link_switch_to_switch(setup, "Switch3", "Switch4", 51, 50)
-    link_switch_to_switch(setup, "Switch4", "Switch5", 51, 50)
-    link_switch_to_switch(setup, "Switch5", "Switch6", 51, 50)
-    link_node_to_switch(setup, "Node16", "Switch6", 0, 0)
+    link_switch_to_switch(setup, "S1", "S3", 3, 1)
+    link_switch_to_switch(setup, "S3", "S2", 2, 4)
+
+    # link_switch_to_switch(setup, "Switch2", "Switch3", 51, 50)
+    # link_switch_to_switch(setup, "Switch3", "Switch4", 51, 50)
+    # link_switch_to_switch(setup, "Switch4", "Switch5", 51, 50)
+    # link_switch_to_switch(setup, "Switch5", "Switch6", 51, 50)
+    # link_node_to_switch(setup, "Node16", "Switch6", 0, 0)
 
     # link_node_to_switch(setup, "Node5", "Switch1")
     # link_node_to_switch(setup, "Node6", "Switch1")
@@ -309,15 +414,24 @@ def main():
     # link_node_to_switch(setup, "Node11", "Switch2")
     # link_node_to_switch(setup, "Node12", "Switch2")
 
-    link_node_to_switch(setup, "Node1", "Switch2")
-    link_node_to_switch(setup, "Node2", "Switch2")
+    # link_node_to_switch(setup, "Node1", "Switch2")
+    # link_node_to_switch(setup, "Node2", "Switch2")
 
-    link_switch_to_switch(setup, "Switch1", "Switch2", 100, 100)
+    # link_switch_to_switch(setup, "Switch1", "Switch2", 100, 100)
 
-    setup.check_for_errors()
-    save_to_json(setup, "/home/p4/p4_bench_api/testing/test2.json")
-    save_to_json(setup, "/home/p4/benchexec/contrib/p4/network_config.json")
+    setup_has_error = setup.check_for_errors()
+    from pathlib import Path
+
+    path = Path(__file__)
+    f_path = str(path.parent.absolute())
+
+    if not setup_has_error:
+        save_to_json(setup, f"{f_path}/netconf.json")
+
+    # save_to_json(setup, "/home/p4/p4_bench_api/testing/test2.json")
+    # save_to_json(setup, "/home/p4/benchexec/contrib/p4/network_config.json")
 
 
 if __name__ == "__main__":
+
     main()
