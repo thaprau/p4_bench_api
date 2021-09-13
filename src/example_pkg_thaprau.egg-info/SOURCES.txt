@@ -1,9 +1,0 @@
-README.md
-setup.py
-src/example_pkg_thaprau.egg-info/PKG-INFO
-src/example_pkg_thaprau.egg-info/SOURCES.txt
-src/example_pkg_thaprau.egg-info/dependency_links.txt
-src/example_pkg_thaprau.egg-info/top_level.txt
-src/p4_bench_api/__init__.py
-src/p4_bench_api/model.py
-src/p4_bench_api/p4_api.py
