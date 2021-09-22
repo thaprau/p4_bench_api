@@ -1,16 +1,24 @@
+from .p4_helper import P4InfoHelper
+import logging
+
+
 class Node(object):
-    def __init__(self, name, ipv4_addr="", node_id=0):
+    def __init__(self, name, ipv4_addr="", mac_addr="", node_id=0):
         self.name = name
         self.iface = ""
         self.ipv4_addr = ipv4_addr
         self.used_ports = []
         self.id = node_id
+        self.mac_addr = mac_addr
 
     def __eq__(self, other):
         if isinstance(other, Node):
             if self.name == other.name or self.id == other.id:
                 return True
         return False
+
+    def __str__(self):
+        return f"Name: {self.name} Id: {self.id}"
 
     def add_ipv4_addres(self, addr):
         self.ipv4_addr = addr
@@ -49,6 +57,8 @@ class Switch(object):
     def add_port(self, port_nr):
         if not port_nr in self.used_ports:
             self.used_ports.append(port_nr)
+            return True
+        return False
 
     def generate_port(self):
         for i in range(len(self.used_ports) + 1):
@@ -65,6 +75,166 @@ class Switch(object):
                 "action_params": action_params,
             }
         )
+
+    def validate_p4_entries(self):
+        if self.p4_info_path:
+            helper = P4InfoHelper(self.p4_info_path)
+
+            for table_entry in self.table_entries:
+
+                table_entry_isvalid = True
+
+                table_name = table_entry["table_name"]
+                action_name = table_entry["action_name"]
+                match_fields = table_entry["match_fields"]
+                action_params = table_entry["action_params"]
+
+                # Get values in simple form
+                tables = helper.getAllTables()
+                actions = helper.getAllActions()
+
+                if type(table_name) != str:
+                    print(f"Table name should be a string")
+                    print_table_entry_info(self.name, table_entry)
+                    return False
+
+                # Check if table exist with same name/alias
+                table_for_check = None
+                for table in tables:
+                    if table.name == table_name or table.alias == table.name:
+                        table_for_check = table
+                        break
+
+                if not table_for_check:
+                    if not table_name:
+                        table_name = "None"
+
+                    print(
+                        f"Error in table entry. Table with name {table_name} could not be found in p4 info file"
+                    )
+                    print_table_names(tables)
+                    print_table_entry_info(self.name, table_entry)
+                    return False
+
+                # Check match_field
+                mf_to_check = table_for_check.match_fields
+
+                if not isinstance(match_fields, dict):
+                    print(f"Error switch: {self.name}. Match_fields should be a dict.")
+                    print_match_field_keys(mf_to_check)
+                    table_entry_isvalid = False
+
+                else:
+                    key_list = list(match_fields.keys())
+                    if len(key_list) == 0:
+                        logging.error(f"Match_field has no keys")
+                        print_match_field_keys(mf_to_check)
+                        table_entry_isvalid = False
+                    else:
+                        key = key_list[0]
+
+                        if key != mf_to_check.name:
+                            print(f"Incorrect match name: {key} in p4 file")
+                            print_match_field_keys(mf_to_check)
+                            table_entry_isvalid = False
+
+                        # Check match type
+                        match_type = mf_to_check.match_type
+                        match_fields_correct = True
+
+                        # Exact match
+                        if match_type == 2:
+                            logging.info("Not implemented")
+                        # LPM match
+                        elif match_type == 3:
+                            value = match_fields[key]
+                            if not type(value) == list:
+                                print(
+                                    f"Error match fields. Expected type list as input for match field value. Got {type(value)}"
+                                )
+                                match_fields_correct = False
+                            else:
+                                if not isinstance(value[1], int):
+                                    print(
+                                        f"Error match fields. Second value should be an integer for LPM match"
+                                    )
+                                    match_fields_correct = False
+                            if len(value) != 2:
+                                print(
+                                    f"Error match fields. Expected list of length 2 as input. Got {value}"
+                                )
+                                match_fields_correct = False
+
+                        # Ternary match
+                        elif match_type == 4:
+                            pass
+                        if not match_fields_correct:
+                            table_entry_isvalid = False
+
+                # Check action
+                if type(action_name) != str:
+                    print("Action name should be a string")
+                    print_table_entry_info(self.name, table_entry)
+                    print_avaialble_actions(table.action_refs, actions)
+                    table_entry_isvalid = False
+
+                action_for_check = None
+                for act in actions:
+                    if act.name == action_name or act.alias == action_name:
+                        action_for_check = act
+                        break
+
+                if not action_for_check:
+                    logging.error(
+                        f"Action with name {action_name} could not be found in p4 file"
+                    )
+
+                    print_avaialble_actions(table.action_refs, actions)
+
+                    table_entry_isvalid = False
+                else:
+                    # Check if required parameters are given
+                    if action_for_check.params:
+                        if type(action_params) != dict:
+                            print(
+                                'Error action params. Should be a dict on format "parametername":"parameter value" '
+                            )
+                            print_action_params_info(action_for_check.params)
+                            table_entry_isvalid = False
+
+                        else:
+                            key = list(action_params.keys())[0]
+                            val = list(action_params.values())[0]
+
+                            if not action_params:
+                                print(f"Action parameter was not given")
+                                print_action_params_info(action_for_check.params)
+                                table_entry_isvalid = False
+                            if not key == action_for_check.params.name:
+                                print(f"Action key did not match key in P4 file")
+                                print_action_params_info(action_for_check.params)
+
+                            if action_for_check.params.bitwidth:
+                                max_val = 2 ^ action_for_check.params.bitwidth
+                                if val >= max_val:
+                                    print(f"Action param is to big")
+                                    table_entry_isvalid = False
+
+                    else:
+                        if action_params:
+                            print(
+                                f"{action_name} does not take input parameters. {action_params} was given"
+                            )
+                            table_entry_isvalid = False
+
+                if not table_entry_isvalid:
+                    print("Error in table entry. Check above on how to fix them")
+                    print_table_entry_info(self.name, table_entry)
+                    return False
+        return table_entry_isvalid
+
+    def __str__(self):
+        return f"Name: {self.name}"
 
 
 class Link(object):
@@ -83,6 +253,9 @@ class Link(object):
             and isinstance(self.device2_port, int)
             and self.conn_type in ["Node_to_Switch", "Node_to_Node", "Switch_to_Switch"]
         )
+
+    def __str__(self):
+        return f"{self.device1}({self.device1_port})<--->({self.device2_port}){self.device2} Type: {self.conn_type}"
 
 
 class NetworkSetup(object):
@@ -115,6 +288,7 @@ class NetworkSetup(object):
                 "ipv4_addr": node.ipv4_addr,
                 "used_ports": node.used_ports,
                 "id": node.id,
+                "mac_addr": node.mac_addr,
             }
 
         setup_dict["switches"] = {}
@@ -148,7 +322,7 @@ class NetworkSetup(object):
         for node in self.nodes:
             nr_of_occ = len([x for x in self.nodes if x == node])
             if nr_of_occ != 1:
-                print(f"Node {node.name} is defined multiple times")
+                print(f"Node {node.name} is defined multiple times. Id {node.id}")
                 setup_invalid = True
 
             if len(node.used_ports) == 0:
@@ -160,14 +334,20 @@ class NetworkSetup(object):
         if not p4_isvalid:
             setup_invalid = True
 
+        used_server_ports = []
         for switch in self.switches:
             nr_of_occ = len([x for x in self.switches if x == switch])
+
             if nr_of_occ != 1:
                 print(f"Switch {switch.name} is defined multiple times")
                 setup_invalid = True
             if len(switch.used_ports) == 0:
                 print(f"Switch {switch.name} is not connected to the network")
                 setup_invalid = True
+            if switch.server_port in used_server_ports:
+                print(f"Switch {switch.name} already used {switch.server_port}")
+            if type(switch.server_port) != int or switch.server_port < 0:
+                print(f"Switch {switch.name} invalid server port {switch.server_port}")
 
         for link in self.links:
             if not link.is_valid():
@@ -177,9 +357,6 @@ class NetworkSetup(object):
         return setup_invalid
 
     def validate_p4_entries(self):
-        from p4_helper import P4InfoHelper
-        import logging
-
         # Go through table entries and provide feedback
         for switch in self.switches:
             if switch.p4_info_path:
@@ -228,6 +405,7 @@ class NetworkSetup(object):
                         print(
                             f"Error switch: {switch.name}. Match_fields should be a dict."
                         )
+                        print_match_field_keys(mf_to_check)
                         table_entry_isvalid = False
 
                     else:
@@ -241,6 +419,7 @@ class NetworkSetup(object):
 
                             if key != mf_to_check.name:
                                 print(f"Incorrect match name: {key} in p4 file")
+                                print_match_field_keys(mf_to_check)
                                 table_entry_isvalid = False
 
                             # Check match type
@@ -308,22 +487,32 @@ class NetworkSetup(object):
                                 table_entry_isvalid = False
 
                             else:
-                                key = list(action_params.keys())[0]
-                                val = list(action_params.values())[0]
-
-                                if not action_params:
-                                    print(f"Action parameter was not given")
+                                if len(action_params) == 0:
+                                    print(f"Empty dict was given for action params")
                                     print_action_params_info(action_for_check.params)
-                                    table_entry_isvalid = False
-                                if not key == action_for_check.params.name:
-                                    print(f"Action key did not match key in P4 file")
-                                    print_action_params_info(action_for_check.params)
+                                else:
+                                    key = list(action_params.keys())[0]
+                                    val = list(action_params.values())[0]
 
-                                if action_for_check.params.bitwidth:
-                                    max_val = 2 ^ action_for_check.params.bitwidth
-                                    if val >= max_val:
-                                        print(f"Action param is to big")
+                                    if not action_params:
+                                        print(f"Action parameter was not given")
+                                        print_action_params_info(
+                                            action_for_check.params
+                                        )
                                         table_entry_isvalid = False
+                                    if not key == action_for_check.params.name:
+                                        print(
+                                            f"Action key did not match key in P4 file"
+                                        )
+                                        print_action_params_info(
+                                            action_for_check.params
+                                        )
+
+                                    if action_for_check.params.bitwidth:
+                                        max_val = 2 ^ action_for_check.params.bitwidth
+                                        if val >= max_val:
+                                            print(f"Action param is to big")
+                                            table_entry_isvalid = False
 
                         else:
                             if action_params:
@@ -336,8 +525,25 @@ class NetworkSetup(object):
                         print("Error in table entry. Check above on how to fix them")
                         print_table_entry_info(switch.name, table_entry)
                         return False
-
+            else:
+                print(
+                    f"Switch: {switch.name} - Skipping checking p4 entries. No p4 info file defined"
+                )
         return True
+
+    def __str__(self):
+        info_string = "--- Nodes ---\n"
+        for node in self.nodes:
+            info_string += f"{node}\n"
+
+        info_string += "--- Switches --- \n"
+        for switch in self.switches:
+            info_string += f"{switch}\n"
+
+        info_string += "--- Links --- \n"
+        for link in self.links:
+            info_string += f"{link} \n"
+        return info_string
 
 
 def print_table_entry_info(switch_name, table_entry):
@@ -394,8 +600,6 @@ def print_action_params_info(action_params):
 
 
 # simple testing
-
-
 def main():
 
     setup = NetworkSetup()
