@@ -18,8 +18,8 @@ import google.protobuf.text_format
 from p4.v1 import p4runtime_pb2
 from p4.config.v1 import p4info_pb2
 
-from convert import encode
-from table import Table, Match_Field, Action, Action_Params
+from .convert import encode
+from .table import Table, Match_Field, Action, Action_Params
 
 
 class P4InfoHelper(object):
