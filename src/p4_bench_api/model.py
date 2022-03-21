@@ -490,29 +490,30 @@ class NetworkSetup(object):
                                 if len(action_params) == 0:
                                     print(f"Empty dict was given for action params")
                                     print_action_params_info(action_for_check.params)
+                                elif len(action_params) != len(action_for_check.params):
+                                    print(
+                                        f"Invalid number of params. Expected {len(action_for_check.params)} got {len(action_params)}"
+                                    )
+                                    print_action_params_info(action_for_check.params)
                                 else:
-                                    key = list(action_params.keys())[0]
-                                    val = list(action_params.values())[0]
-
-                                    if not action_params:
-                                        print(f"Action parameter was not given")
-                                        print_action_params_info(
-                                            action_for_check.params
-                                        )
-                                        table_entry_isvalid = False
-                                    if not key == action_for_check.params.name:
-                                        print(
-                                            f"Action key did not match key in P4 file"
-                                        )
-                                        print_action_params_info(
-                                            action_for_check.params
-                                        )
-
-                                    if action_for_check.params.bitwidth:
-                                        max_val = 2 ^ action_for_check.params.bitwidth
-                                        if val >= max_val:
-                                            print(f"Action param is to big")
+                                    for key, val in action_params.items():
+                                        try:
+                                            action_param_for_check = [
+                                                para
+                                                for para in action_for_check.params
+                                                if para.name == key
+                                            ][0]
+                                        except IndexError:
+                                            print(
+                                                f"{key} is not a valid param name for action {action_for_check.name}"
+                                            )
+                                            print_action_params_info(
+                                                action_for_check.params
+                                            )
                                             table_entry_isvalid = False
+
+                                        # Todo
+                                        # Check bitwidth
 
                         else:
                             if action_params:
@@ -590,12 +591,13 @@ def print_avaialble_actions(action_refs, actions):
 def print_action_params_info(action_params):
     print("##### Action params info #####")
 
-    print(f"Name: {action_params.name}")
-    print(f"Id: {action_params.id}")
-    try:
-        print(f"Bitwidth: {action_params.bitwidth}")
-    except:
-        pass
+    for action_para in action_params:
+        print(f"Name: {action_para.name}")
+        print(f"Id: {action_para.id}")
+        try:
+            print(f"Bitwidth: {action_para.bitwidth}")
+        except:
+            pass
     print("##### Action params info #####")
 
 

@@ -263,15 +263,10 @@ class P4InfoHelper(object):
         action_list = []
 
         for o in getattr(self.p4info, "actions"):
-            params = None
+            params = []
 
-            try:
-                para = o.params[0]
-
-                params = Action_Params(para.id, para.name, para.bitwidth)
-            except:
-                pass
-
+            for para in o.params:
+                params.append(Action_Params(para.id, para.name, para.bitwidth))
             action = Action(o.preamble.id, o.preamble.name, o.preamble.alias, params)
 
             action_list.append(action)
