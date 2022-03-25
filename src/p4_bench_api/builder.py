@@ -13,7 +13,7 @@ class NetworkBuilder(object):
     Class for creating network configuration for P4 benchexec. Holds all available functions.
     """
 
-    def __init__(self):
+    def _init__(self):
         self.network_setup = NetworkSetup()
         self.table_entries = []
         self.ip_addresses = []
@@ -26,13 +26,13 @@ class NetworkBuilder(object):
         Adds a new node to the setup with given parameters.
 
         Args:
-            setup (NetworkSetup): The setup to add the node to
             name (str): Name of the node. Should be unique.
             ipv4_addr (str, optional): [ipv4-address of the node.]. Defaults to "".
             mac_addr (str, optional): [mac address of the node]. Defaults to "".
+            node_id (str, optional): [id of the node]. If no id is given a new on is auto generated
         """
         if node_id == "":
-            node_id = self.__generate_node_id()
+            node_id = self._generate_node_id()
 
         node = Node(name, ipv4_addr=ipv4_addr, mac_addr=mac_addr)
         node.id = node_id
@@ -42,10 +42,10 @@ class NetworkBuilder(object):
         if not node in self.network_setup.nodes:
             self.network_setup.add_node(node)
         else:
-            self.__debug_info("Node with same id or name already exits")
+            self._debug_info("Node with same id or name already exits")
 
     def add_new_switch(
-        self, name: str, p4_file_name: str, p4_info_path="", server_port=-1
+        self, name: str, p4_file_name: str, p4_info_path, server_port=-1
     ):
         """
         Adds new switch to the setup
@@ -53,14 +53,14 @@ class NetworkBuilder(object):
         Args:
             name (str): Name of the switch. Should be unique.
             p4_file_name (str): Name of the p4 program to be executed on the switch
-            p4_info_path (str, optional): Path to p4 info file. Required for p4 entry error check. Defaults to "".
+            p4_info_path (str): Path to p4 info file.
             server_port (int, optional): Grpc connection port of the switch. -1 generates a port automatically.
         """
         if server_port < 0:
-            server_port = self.__generate_switch_server_port()
+            server_port = self._generate_switch_server_port()
 
         if p4_info_path and not os.path.exists(p4_info_path):
-            self.__debug_info(f"Could not find p4 info file: {p4_info_path}")
+            self._debug_info(f"Could not find p4 info file: {p4_info_path}")
             return
 
         switch = Switch(name, p4_file_name, p4_info_path, server_port)
@@ -68,7 +68,7 @@ class NetworkBuilder(object):
         if not switch in self.network_setup.switches:
             self.network_setup.add_switch(switch)
         else:
-            self.__debug_info("Switch with same id or name already exits")
+            self._debug_info("Switch with same id or name already exits")
 
     def add_table_entry_from_file(self, switch_name: str, path: str):
         """Add a table definition to a switch
@@ -89,33 +89,33 @@ class NetworkBuilder(object):
         dev1 = None
         dev2 = None
 
-        dev1 = self.__get_device(device1_name)
-        dev2 = self.__get_device(device2_name)
+        dev1 = self._get_device(device1_name)
+        dev2 = self._get_device(device2_name)
 
         if not dev1:
-            self.__debug_info(
+            self._debug_info(
                 f"Failed to add link between {device1_name} and {device2_name} --> Device: {device1_name} could not be found in setup"
             )
             return
         if not dev2:
-            self.__debug_info(
+            self._debug_info(
                 f"Failed to add link between {device1_name} and {device2_name} --> Device: {device2_name} could not be found in setup"
             )
             return
 
         # Check if desired port is used
         if device1_port in dev1.used_ports:
-            self.__debug_info(
+            self._debug_info(
                 f"Failed to add link between {device1_name} and {device2_name} --> Port {device1_port} alread used in {device1_name}"
             )
             return
         if device2_port in dev2.used_ports:
-            self.__debug_info(
+            self._debug_info(
                 f"Failed to add link between {device1_name} and {device2_name} --> Port {device2_port} alread used in {device2_name}"
             )
             return
 
-        self.__add_link_to_setup(dev1, dev2, device1_port, device2_port)
+        self._add_link_to_setup(dev1, dev2, device1_port, device2_port)
 
     def add_switch_to_setup(self, switch: Switch):
         """
@@ -127,10 +127,10 @@ class NetworkBuilder(object):
         switch_is_unique = True
         for sw in self.network_setup.switches:
             if switch.name == sw.name:
-                self.__debug_info(f"Switch with name {switch.name} already exits")
+                self._debug_info(f"Switch with name {switch.name} already exits")
                 switch_is_unique = False
             if switch.server_port == sw.server_port:
-                self.__debug_info(
+                self._debug_info(
                     f"Swtich {switch.name} invalid server port. Port already used by Switch {sw.name}"
                 )
                 switch_is_unique = False
@@ -138,7 +138,7 @@ class NetworkBuilder(object):
         if switch_is_unique:
             self.network_setup.add_switch(switch)
         else:
-            self.__debug_info(f"Not adding Switch {switch.name} to setup")
+            self._debug_info(f"Not adding Switch {switch.name} to setup")
 
     def add_node_to_setup(self, node: Node):
         """
@@ -150,13 +150,13 @@ class NetworkBuilder(object):
         node_is_unique = True
         for n in self.network_setup.nodes:
             if n == node:
-                self.__debug_info(f"Node {node.name} already exits")
+                self._debug_info(f"Node {node.name} already exits")
                 node_is_unique = False
 
         if node_is_unique:
             self.network_setup.add_node(node)
         else:
-            self.__debug_info(f"Not adding Node {node.name} to setup")
+            self._debug_info(f"Not adding Node {node.name} to setup")
 
     def save_setup_to_json(self, path: str):
         """Save the setup to json file. This is the file to be added as input to benchexec
@@ -189,13 +189,14 @@ class NetworkBuilder(object):
     def read_base_from_json(self, path: str):
         """
         Reads base setup from configuration file. Includes Nodes, Switches and Links.
+        Will not include table entries.
 
         Args:
             path: Absolute path to network configuration file
         """
 
         if not os.path.exists(path):
-            self.__debug_info(f"Failed to read {path}. Path not found")
+            self._debug_info(f"Failed to read {path}. Path not found")
             return
 
         with open(path) as f:
@@ -248,7 +249,7 @@ class NetworkBuilder(object):
                 switch = sw
 
         if not switch:
-            self.__debug_info(f"Could not find switch {switch_name}")
+            self._debug_info(f"Could not find switch {switch_name}")
             return
 
         switch.add_table_entry(table_name, action_name, match_fields, action_params)
@@ -284,7 +285,7 @@ class NetworkBuilder(object):
                 switch = sw
 
         if not switch:
-            self.__debug_info(f"Could not find switch {switch_name}")
+            self._debug_info(f"Could not find switch {switch_name}")
             return
 
         if not self.last_table_entry:
@@ -321,7 +322,7 @@ class NetworkBuilder(object):
             p4_prog_name (str): Name of the p4 program
             p4_info_path (str): Path to p4 info file
         """
-        switch = self.__get_device(switch_name)
+        switch = self._get_device(switch_name)
 
         switch.p4_info_path = p4_info_path
         switch.p4_prog_name = p4_prog_name
@@ -365,33 +366,33 @@ class NetworkBuilder(object):
         return self.network_setup.check_for_errors()
 
     # Private functions
-    def __get_device(self, device_name):
+    def _get_device(self, device_name):
         for dev in self.network_setup.nodes + self.network_setup.switches:
             if dev.name == device_name:
                 return dev
         return None
 
-    def __add_link_to_setup(self, dev1, dev2, device1_port, device2_port):
+    def _add_link_to_setup(self, dev1, dev2, device1_port, device2_port):
         if type(dev1) == Node:
             if type(dev2) == Node:
-                self.__link_node_to_node(
+                self._link_node_to_node(
                     dev1.name, dev2.name, device1_port, device2_port
                 )
             elif type(dev2) == Switch:
-                self.__link_node_to_switch(
+                self._link_node_to_switch(
                     dev1.name, dev2.name, device1_port, device2_port
                 )
         elif type(dev1) == Switch:
             if type(dev2) == Node:
-                self.__link_node_to_switch(
+                self._link_node_to_switch(
                     dev2.name, dev1.name, device2_port, device1_port
                 )
             elif type(dev2) == Switch:
-                self.__link_switch_to_switch(
+                self._link_switch_to_switch(
                     dev1.name, dev2.name, device1_port, device2_port
                 )
 
-    def __link_node_to_node(self, node1_name, node2_name, node1_port=-1, node2_port=-1):
+    def _link_node_to_node(self, node1_name, node2_name, node1_port=-1, node2_port=-1):
         """Create a link between two nodes.
 
         Args:
@@ -413,7 +414,7 @@ class NetworkBuilder(object):
                 elif node.name == node2_name:
                     node.used_ports.append(node2_port)
 
-    def __link_node_to_switch(
+    def _link_node_to_switch(
         self, node_name, switch_name, node_port=-1, switch_port=-1
     ):
         """Create link between node and switch
@@ -457,7 +458,7 @@ class NetworkBuilder(object):
         if not link in self.network_setup.links:
             self.network_setup.add_link(link)
 
-    def __link_switch_to_switch(
+    def _link_switch_to_switch(
         self, switch1_name, switch2_name, switch1_port=-1, switch2_port=-1
     ):
         """Create link between two switches
@@ -498,7 +499,7 @@ class NetworkBuilder(object):
         if not link in self.network_setup.links:
             self.network_setup.links.append(link)
 
-    def __generate_fresh_ip(self, domain_name=""):
+    def _generate_fresh_ip(self, domain_name=""):
         """Generates a unused ipv4 address in a specific domain. Define a domain name to generate an ip address in a specific domain. Ex 192.168.
 
         Args:
@@ -553,20 +554,20 @@ class NetworkBuilder(object):
 
         return addres_array_int
 
-    def __generate_fresh_mac(self, setup):
+    def _generate_fresh_mac(self, setup):
         # TODO
         nr_of_devices = len(setup.nodes) + len(setup.switches)
 
         return
 
-    def __generate_node_id(self):
+    def _generate_node_id(self):
         id = 0
         while id in self.node_ids:
             id += 1
 
         return id
 
-    def __generate_switch_server_port(self):
+    def _generate_switch_server_port(self):
         server_port = 50051
         switch_ports = []
 
@@ -578,7 +579,7 @@ class NetworkBuilder(object):
 
         return server_port
 
-    def __debug_info(self, message):
+    def _debug_info(self, message):
         caller = getframeinfo(stack()[2][0])
         print(
             "%s:%d - %s" % (caller.filename, caller.lineno, message)
