@@ -18,6 +18,8 @@ class NetworkBuilder(object):
         self.table_entries = []
         self.ip_addresses = []
         self.node_ids = []
+        self.valid = False
+        self.last_table_entry = None
 
     def add_new_node(self, name: str, ipv4_addr="", mac_addr="", node_id=""):
         """
@@ -162,6 +164,14 @@ class NetworkBuilder(object):
         Args:
             path (str): Path to where to save the file. Ex. /home/setup.json
         """
+
+        if not self.valid:
+            self.valid = not self.check_for_errors()
+
+        if not self.valid:
+            print("Setup isnt valid. Please fix errors before saving")
+            return
+
         data = self.network_setup.to_dict()
         with open(path, "w") as json_file:
             json.dump(data, json_file, indent=4, sort_keys=True)
@@ -242,6 +252,63 @@ class NetworkBuilder(object):
             return
 
         switch.add_table_entry(table_name, action_name, match_fields, action_params)
+        self.last_table_entry = {
+            "switch_name": switch_name,
+            "table_name": table_name,
+            "action_name": action_name,
+            "match_fields": match_fields,
+            "action_params": action_params,
+        }
+
+    def add_table_entry_to_switch_from_prev(
+        self,
+        switch_name="",
+        table_name="",
+        action_name="",
+        match_fields={},
+        action_params={},
+    ):
+        """
+        Same as add_table_entry_to_switch but if no argument is given, uses the same
+        as the last table entry. Good if you want to add multiple similar table entries.
+
+        The old dicts will be used, but all given keys will override the previous values.
+        """
+
+        switch = None
+
+        if not switch_name:
+            switch_name = self.last_table_entry["switch_name"]
+        for sw in self.network_setup.switches:
+            if switch_name == sw.name:
+                switch = sw
+
+        if not switch:
+            self.__debug_info(f"Could not find switch {switch_name}")
+            return
+
+        if not self.last_table_entry:
+            print(f"No previous table entry was found")
+
+        if not table_name:
+            table_name = self.last_table_entry["table_name"]
+        if not action_name:
+            action_name = self.last_table_entry["action_name"]
+
+        # Match fields
+        if match_fields:
+            self.last_table_entry["match_fields"].update(match_fields)
+
+        # action params
+        if action_params:
+            self.last_table_entry["action_params"].update(action_params)
+
+        switch.add_table_entry(
+            table_name,
+            action_name,
+            self.last_table_entry["match_fields"],
+            self.last_table_entry["action_params"],
+        )
 
     def update_switch_p4_info(
         self, switch_name: str, p4_prog_name: str, p4_info_path: str
@@ -543,158 +610,3 @@ class NetworkBuilder(object):
                         "action_params": action_params,
                     }
                 )
-
-
-def main():
-
-    builder = NetworkBuilder()
-
-    builder.add_new_node("N1", "10.0.1.1")
-    builder.add_new_node("N2", "10.0.2.2")
-    builder.add_new_node("N3", "10.0.3.3")
-    builder.add_new_node("N4", "10.0.4.4")
-
-    builder.add_new_node("N5", "10.0.1.1")
-    builder.add_new_node("N6", "10.0.2.2")
-    builder.add_new_node("N7", "10.0.3.3")
-    builder.add_new_node("N8", "10.0.4.4")
-
-    builder.add_new_switch("S4", "test")
-    builder.add_new_switch("S5", "test")
-    builder.add_new_switch("S6", "test")
-
-    builder.add_new_link("S4", "S5")
-    builder.add_new_link("S5", "S6")
-    builder.add_new_link("N5", "S6")
-    builder.add_new_link("N6", "S6")
-    builder.add_new_link("N7", "S6")
-    builder.add_new_link("N8", "S6")
-
-    builder.add_new_switch(
-        "S1",
-        "simple_switch2",
-        "/home/p4/installations/bf-sde-9.5.0/build/p4-build/tofino/simple_switch2/tofino/p4info2.pb.txt",
-    )
-    builder.add_new_switch(
-        "S2",
-        "simple_switch2",
-        "/home/p4/installations/bf-sde-9.5.0/build/p4-build/tofino/simple_switch2/tofino/p4info2.pb.txt",
-    )
-    builder.add_new_switch(
-        "S3",
-        "simple_switch2",
-        "/home/p4/installations/bf-sde-9.5.0/build/p4-build/tofino/simple_switch2/tofino/p4info2.pb.txt",
-    )
-
-    builder.add_new_link("S3", "S4")
-    builder.add_new_link("N1", "S1", 0, 1)
-    builder.add_new_link("N2", "S1", 0, 2)
-    builder.add_new_link("N3", "S2", 0, 1)
-    builder.add_new_link("N4", "S2", 0, 2)
-    builder.add_new_link("S1", "S3", 3, 1)
-    builder.add_new_link("S3", "S2", 2, 3)
-
-    builder.print_setup()
-
-    builder.add_table_entry_to_switch(
-        "S1",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.1.1", 32]},
-        {"egress_port": 1},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S1",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.2.2", 32]},
-        {"egress_port": 2},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S1",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.3.3", 32]},
-        {"egress_port": 3},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S1",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.4.4", 32]},
-        {"egress_port": 4},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S2",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.1.1", 32]},
-        {"egress_port": 3},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S2",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.2.2", 32]},
-        {"egress_port": 3},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S2",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.3.3", 32]},
-        {"egress_port": 1},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S2",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.4.4", 32]},
-        {"egress_port": 2},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S3",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.1.1", 32]},
-        {"egress_port": 1},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S3",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.2.2", 32]},
-        {"egress_port": 1},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S3",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.3.3", 32]},
-        {"egress_port": 2},
-    )
-
-    builder.add_table_entry_to_switch(
-        "S3",
-        "Ingress.ipv4_lpm",
-        "Ingress.ipv4_forward",
-        {"hdr.ipv4.dst_addr": [f"10.0.4.4", 32]},
-        {"egress_port": 2},
-    )
-
-    builder.check_for_errors()
-    builder.save_setup_to_json("/home/p4/Drawing_Test/4_nodes_3_switch.json")
-
-
-if __name__ == "__main__":
-    main()
