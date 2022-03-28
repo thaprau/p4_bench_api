@@ -13,7 +13,7 @@ class NetworkBuilder(object):
     Class for creating network configuration for P4 benchexec. Holds all available functions.
     """
 
-    def _init__(self):
+    def __init__(self):
         self.network_setup = NetworkSetup()
         self.table_entries = []
         self.ip_addresses = []
@@ -298,11 +298,17 @@ class NetworkBuilder(object):
 
         # Match fields
         if match_fields:
-            self.last_table_entry["match_fields"].update(match_fields)
+            self.last_table_entry = {
+                **self.last_table_entry,
+                **{"match_fields": match_fields},
+            }
 
         # action params
         if action_params:
-            self.last_table_entry["action_params"].update(action_params)
+            self.last_table_entry = {
+                **self.last_table_entry,
+                **{"action_params": action_params},
+            }
 
         switch.add_table_entry(
             table_name,
