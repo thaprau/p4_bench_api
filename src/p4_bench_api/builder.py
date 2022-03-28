@@ -288,6 +288,9 @@ class NetworkBuilder(object):
             self._debug_info(f"Could not find switch {switch_name}")
             return
 
+        # Update last switch entry name
+        self.last_table_entry["switch_name"] = switch_name
+
         if not self.last_table_entry:
             print(f"No previous table entry was found")
 
